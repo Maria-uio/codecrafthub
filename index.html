@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeCraftHub: Your Learning Management Platform</title>
+<style>
+:root{--primary:#8B5CF6;--success:#F59E0B;--danger:#EF4444;--bg:#f6f4fb;--card:#fff;--text:#1f1b2e;--muted:#6b6880;--line:#e4e0f0}
+*{box-sizing:border-box}
+body{margin:0;font-family:Georgia,"Times New Roman",serif;background:var(--bg);color:var(--text);line-height:1.5}
+h1,h2,label,button,th,.badge,input,select,textarea{font-family:"Trebuchet MS",Verdana,sans-serif}
+header{background:var(--primary);color:#fff;padding:22px 20px}
+header h1{margin:0;font-size:1.5rem}
+header p{margin:4px 0 0;opacity:.9;font-size:.95rem}
+main{max-width:1000px;margin:0 auto;padding:20px}
+section{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:20px;margin-bottom:20px}
+h2{margin:0 0 14px;font-size:1.15rem}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.full{grid-column:1/-1}
+label{display:block;font-size:.85rem;font-weight:bold;margin-bottom:4px}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;font-size:.95rem;background:#fff;color:var(--text)}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
+textarea{resize:vertical;min-height:70px}
+button{border:0;border-radius:6px;padding:9px 16px;font-size:.9rem;font-weight:bold;cursor:pointer;color:#fff}
+.btn-primary{background:var(--primary)}
+.btn-secondary{background:#e9e5f5;color:var(--text)}
+.btn-edit{background:var(--primary);padding:6px 12px}
+.btn-delete{background:var(--danger);padding:6px 12px}
+button:disabled{opacity:.6;cursor:not-allowed}
+.actions{display:flex;gap:8px;margin-top:14px}
+#message{display:none;padding:12px 14px;border-radius:6px;margin-bottom:16px;font-family:"Trebuchet MS",Verdana,sans-serif;font-size:.92rem}
+#message.success{display:block;background:#fef3dc;border:1px solid var(--success);color:#7a4b00}
+#message.error{display:block;background:#fde8e8;border:1px solid var(--danger);color:#8a1c1c}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.8rem;color:var(--muted)}
+td.row-actions{white-space:nowrap}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:.78rem;font-weight:bold;white-space:nowrap}
+.s-ns{background:#ececf1;color:#4a4860}
+.s-ip{background:#ece4ff;color:#5b2fc9}
+.s-c{background:#fef3dc;color:#8a5200}
+.loading{display:none;align-items:center;gap:10px;color:var(--muted);font-family:"Trebuchet MS",Verdana,sans-serif;padding:8px 0}
+.loading.on{display:flex}
+.spinner{width:20px;height:20px;border:3px solid var(--line);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;color:var(--muted);padding:24px 0;display:none}
+@media (prefers-reduced-motion:reduce){.spinner{animation-duration:2s}}
+@media (max-width:640px){.grid{grid-template-columns:1fr}
+ table,thead,tbody,tr,th,td{display:block}
+ thead{display:none}
+ tr{border:1px solid var(--line);border-radius:8px;margin-bottom:12px;padding:8px}
+ td{border:0;padding:4px 6px}
+ td::before{content:attr(data-label)": ";font-weight:bold;font-family:"Trebuchet MS",Verdana,sans-serif;font-size:.8rem;color:var(--muted)}
+ td.row-actions{margin-top:6px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>CodeCraftHub: Your Learning Management Platform</h1>
+  <p>Administra tus cursos: crea, edita y elimina.</p>
+</header>
+<main>
+  <div id="message" role="status"></div>
+
+  <section>
+    <h2 id="formTitle">Add Course</h2>
+    <div class="grid">
+      <div class="full"><label for="name">Name</label><input id="name" type="text" maxlength="120"></div>
+      <div class="full"><label for="description">Description</label><textarea id="description"></textarea></div>
+      <div><label for="target_date">Target date</label><input id="target_date" type="date"></div>
+      <div><label for="status">Status</label>
+        <select id="status">
+          <option value="Not Started">Not Started</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Completed">Completed</option>
+        </select></div>
+    </div>
+    <div class="actions">
+      <button id="saveBtn" class="btn-primary" type="button">Add course</button>
+      <button id="cancelBtn" class="btn-secondary" type="button" style="display:none">Cancel</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Courses</h2>
+    <div id="loading" class="loading"><div class="spinner"></div><span>Cargando...</span></div>
+    <div id="empty" class="empty">No courses yet. Agrega el primero con el formulario de arriba.</div>
+    <div class="table-wrap">
+      <table id="table" style="display:none">
+        <thead><tr><th>ID</th><th>Name</th><th>Description</th><th>Target date</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+const API = "http://localhost:5000/api/courses";
+const CONNECT_ERROR = "Could not connect to the server. Make sure the backend is running at http://localhost:5000";
+const STATUS_CLASS = {"Not Started":"s-ns","In Progress":"s-ip","Completed":"s-c"};
+let courses = [];
+let editingId = null;
+let msgTimer = null;
+
+const $ = id => document.getElementById(id);
+
+// Escapa texto antes de insertarlo en el HTML
+function esc(value){
+  return String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function showMessage(text, type){
+  const box = $("message");
+  box.textContent = text;
+  box.className = type;
+  clearTimeout(msgTimer);
+  if(type === "success") msgTimer = setTimeout(() => { box.className = ""; box.style.display = "none"; }, 4000);
+  else box.style.display = "block";
+}
+
+function setLoading(on){
+  $("loading").classList.toggle("on", on);
+  $("saveBtn").disabled = on;
+}
+
+// Llamada genérica a la API con manejo de errores
+async function request(url, options){
+  let res;
+  try{
+    res = await fetch(url, options);
+  }catch(e){
+    throw new Error(CONNECT_ERROR);
+  }
+  let data = null;
+  try{ data = await res.json(); }catch(e){}
+  if(!res.ok){
+    throw new Error((data && data.error) || "Error " + res.status);
+  }
+  return data;
+}
+
+function formatDate(iso){
+  if(!iso) return "";
+  const d = new Date(iso);
+  return isNaN(d) ? esc(iso) : d.toLocaleDateString("es-EC",{year:"numeric",month:"short",day:"numeric"});
+}
+
+function render(){
+  const tbody = $("tbody");
+  $("empty").style.display = courses.length ? "none" : "block";
+  $("table").style.display = courses.length ? "table" : "none";
+  tbody.innerHTML = courses.map(c => `
+    <tr>
+      <td data-label="ID">${esc(c.id)}</td>
+      <td data-label="Name"><strong>${esc(c.name)}</strong></td>
+      <td data-label="Description">${esc(c.description)}</td>
+      <td data-label="Target date">${esc(c.target_date)}</td>
+      <td data-label="Status"><span class="badge ${STATUS_CLASS[c.status] || "s-ns"}">${esc(c.status)}</span></td>
+      <td data-label="Created">${formatDate(c.created_at)}</td>
+      <td class="row-actions">
+        <button class="btn-edit" data-edit="${esc(c.id)}" type="button">Edit</button>
+        <button class="btn-delete" data-delete="${esc(c.id)}" type="button">Remove</button>
+      </td>
+    </tr>`).join("");
+}
+
+async function loadCourses(){
+  setLoading(true);
+  try{
+    const data = await request(API);
+    courses = data.courses || [];   // la lista viene dentro de "courses"
+    render();
+  }catch(e){
+    showMessage(e.message, "error");
+  }finally{
+    setLoading(false);
+  }
+}
+
+function resetForm(){
+  editingId = null;
+  $("name").value = "";
+  $("description").value = "";
+  $("target_date").value = "";
+  $("status").value = "Not Started";
+  $("formTitle").textContent = "Add Course";
+  $("saveBtn").textContent = "Add course";
+  $("cancelBtn").style.display = "none";
+}
+
+function getFormData(){
+  return {
+    name: $("name").value.trim(),
+    description: $("description").value.trim(),
+    target_date: $("target_date").value,
+    status: $("status").value
+  };
+}
+
+function validate(d){
+  const missing = [];
+  if(!d.name) missing.push("name");
+  if(!d.description) missing.push("description");
+  if(!d.target_date) missing.push("target date");
+  if(!d.status) missing.push("status");
+  return missing.length ? "Please complete the required fields: " + missing.join(", ") + "." : null;
+}
+
+async function saveCourse(){
+  const data = getFormData();
+  const problem = validate(data);
+  if(problem){ showMessage(problem, "error"); return; }
+
+  setLoading(true);
+  try{
+    const isEdit = editingId !== null;
+    // El PUT envía los 4 campos completos
+    const res = await request(isEdit ? `${API}/${editingId}` : API, {
+      method: isEdit ? "PUT" : "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(data)
+    });
+    showMessage(res.message || (isEdit ? "Curso actualizado." : "Curso creado."), "success");
+    resetForm();
+    await loadCourses();
+  }catch(e){
+    showMessage(e.message, "error");
+    setLoading(false);
+  }
+}
+
+function startEdit(id){
+  const c = courses.find(x => String(x.id) === String(id));
+  if(!c) return;
+  editingId = c.id;
+  $("name").value = c.name;
+  $("description").value = c.description;
+  $("target_date").value = c.target_date;
+  $("status").value = c.status;
+  $("formTitle").textContent = "Edit Course #" + c.id;
+  $("saveBtn").textContent = "Save changes";
+  $("cancelBtn").style.display = "inline-block";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+async function deleteCourse(id){
+  if(!confirm("¿Seguro que quieres eliminar este curso?")) return;
+  setLoading(true);
+  try{
+    const res = await request(`${API}/${id}`, {method:"DELETE"});
+    showMessage(res.message || "Curso eliminado.", "success");
+    if(String(editingId) === String(id)) resetForm();
+    await loadCourses();
+  }catch(e){
+    showMessage(e.message, "error");
+    setLoading(false);
+  }
+}
+
+$("saveBtn").addEventListener("click", saveCourse);
+$("cancelBtn").addEventListener("click", resetForm);
+$("tbody").addEventListener("click", e => {
+  const edit = e.target.closest("[data-edit]");
+  const del = e.target.closest("[data-delete]");
+  if(edit) startEdit(edit.dataset.edit);
+  if(del) deleteCourse(del.dataset.delete);
+});
+
+loadCourses();
+</script>
+</body>
+</html>

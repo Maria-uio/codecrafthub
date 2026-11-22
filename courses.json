@@ -1,1 +1,10 @@
-[]
+[
+    {
+        "id": 1,
+        "name": "JavaScript Basics",
+        "description": "Variables, funciones y DOM",
+        "target_date": "2026-12-15",
+        "status": "In Progress",
+        "created_at": "2026-11-22T03:46:41.782626Z"
+    }
+]
